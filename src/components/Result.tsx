@@ -5,6 +5,7 @@ interface ResultProps {
   stats?: {
     totalPossibleLikedTracks: number
     rank: number
+    festivalName?: string
   }
   onReset: () => void
 }
@@ -26,16 +27,24 @@ export default function Result({ link, stats, onReset }: ResultProps) {
     window.open(link, '_blank')
   }
 
+  const displayFestivalName = stats?.festivalName;
   return (
     <div className="bg-gray-800 p-8 rounded-lg shadow-lg">
-      <h2 className="text-2xl font-bold mb-6 text-white">🎉 Your Personalized Link</h2>
+      <h2 className="text-2xl font-bold mb-2 text-white">🎉 Your Personalized Link</h2>
 
+      {displayFestivalName && (
+        <div className="mb-6 p-3 bg-gray-900 rounded-lg border border-gray-700 text-center">
+          <span className="text-white text-lg font-bold">Festival: </span>
+          <span className="text-green-300 text-lg font-semibold">{displayFestivalName}</span>
+        </div>
+      )}
       {stats && (
         <div className="mb-6 p-4 bg-green-900 rounded-lg border border-green-700">
           <div className="text-center">
             <p className="text-green-300 text-sm mb-2">Possible Liked Tracks You Can Hear</p>
             <p className="text-4xl font-bold text-green-400">{stats.totalPossibleLikedTracks}</p>
             <p className="text-green-300 text-xs mt-2">Based on artists you're watching & your Spotify favorites</p>
+            <p className="text-green-300 text-sm mt-2">Rank: <span className="font-bold">{stats.rank}</span></p>
           </div>
         </div>
       )}

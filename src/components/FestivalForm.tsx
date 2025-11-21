@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface FestivalFormProps {
   setClashfinderLink: (link: string) => void
@@ -6,68 +6,102 @@ interface FestivalFormProps {
 }
 
 export default function FestivalForm({ setClashfinderLink, setFestivalStats }: FestivalFormProps) {
-  const [festival, setFestival] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [festival, setFestival] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [festivals, setFestivals] = useState<Array<{
+    title: string;
+    internalName: string;
+    startDate: string;
+    printAdvisory: number;
+  }>>([]);
+  const [search, setSearch] = useState('');
+  const [selectedInternalName, setSelectedInternalName] = useState('');
+  const [festivalsLoaded, setFestivalsLoaded] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
 
+  // Fetch festivals only when user interacts with the search box
+  const fetchFestivals = async () => {
+    if (festivalsLoaded) return;
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/Spotify/festivals/list/all`, {
+        credentials: 'include',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setFestivals(data);
+        } else {
+          setFestivals([]);
+          setError('Festival list response is invalid.');
+        }
+        setFestivalsLoaded(true);
+      } else {
+        setError('Failed to load festival list. Please try again later.');
+      }
+    } catch (err) {
+      setError('Network error loading festival list.');
+    }
+  };
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
+    e.preventDefault();
+    setError(null);
 
-    if (!festival.trim()) {
-      setError('Please enter a festival name')
-      return
+    // Use selectedInternalName if chosen, otherwise use the search value
+    const festivalIdentifier = selectedInternalName || search.trim();
+    if (!festivalIdentifier) {
+      setError('Please select or enter a festival name');
+      return;
     }
 
-    setLoading(true)
+    setLoading(true);
 
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_API_BASE_URL}/spotify/festival/${encodeURIComponent(
-          festival
-        )}`,
+        `${import.meta.env.VITE_API_BASE_URL}/spotify/festival/${encodeURIComponent(festivalIdentifier)}`,
         {
           credentials: 'include',
         }
-      )
+      );
 
       if (!res.ok) {
-        throw new Error('Failed to fetch festival data')
+        throw new Error('Failed to fetch festival data');
       }
 
-      const contentType = res.headers.get('content-type')
-      let clashfinderUrl: string | null = null
+      const contentType = res.headers.get('content-type');
+      let clashfinderUrl: string | null = null;
 
       // Handle both JSON and plain text responses
       if (contentType && contentType.includes('application/json')) {
-        const data = await res.json()
-        clashfinderUrl = data.url || data.clashfinderUrl
-        
+        const data = await res.json();
+        clashfinderUrl = data.url || data.clashfinderUrl;
+
         // Extract stats if available
         if (setFestivalStats && data.totalPossibleLikedTracks !== undefined) {
           setFestivalStats({
             totalPossibleLikedTracks: data.totalPossibleLikedTracks,
             rank: data.rank || 0,
-          })
+            festivalName: data.festival?.name || '',
+          });
         }
       } else {
         // If response is plain text, treat it as the URL directly
-        clashfinderUrl = await res.text()
+        clashfinderUrl = await res.text();
       }
 
       if (clashfinderUrl && clashfinderUrl.startsWith('http')) {
-        setClashfinderLink(clashfinderUrl)
+        setClashfinderLink(clashfinderUrl);
       } else {
-        setError('No valid Clashfinder URL returned')
+        setError('No valid Clashfinder URL returned');
       }
     } catch (err) {
       const message =
         err instanceof Error
           ? err.message
-          : 'Error fetching festival data. Please try again.'
-      setError(message)
+          : 'Error fetching festival data. Please try again.';
+      setError(message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
@@ -76,21 +110,58 @@ export default function FestivalForm({ setClashfinderLink, setFestivalStats }: F
       <h2 className="text-2xl font-bold mb-6 text-white">Select Your Festival</h2>
 
       <form onSubmit={handleSubmit}>
-        <div className="mb-4">
-          <label htmlFor="festival" className="block text-gray-300 mb-2">
-            Festival Name (e.g., tml2025w1)
+        <div className="mb-4" style={{position: 'relative'}}>
+          <label htmlFor="festival-search" className="block text-gray-300 mb-2">
+            Search Festival Name
           </label>
           <input
-            id="festival"
+            id="festival-search"
             type="text"
-            value={festival}
-            onChange={(e) => setFestival(e.target.value)}
-            placeholder="Enter festival ID..."
-            className="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded focus:outline-none focus:border-green-500"
+            autoComplete="off"
+            value={selectedInternalName ? festival : search}
+            onFocus={() => { fetchFestivals(); setShowDropdown(true); }}
+            onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setSelectedInternalName('');
+              setFestival('');
+              setShowDropdown(true);
+              if (!festivalsLoaded) fetchFestivals();
+            }}
+            placeholder="Type to search..."
+            className="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded focus:outline-none focus:border-green-500 mb-2"
             disabled={loading}
           />
+          {showDropdown && (
+            <div className="max-h-40 overflow-y-auto mb-2 absolute z-10 bg-gray-800 border border-gray-600 rounded shadow-lg" style={{width: 'inherit', minWidth: '200px'}}>
+              {error && (
+                <div className="mb-2 p-2 bg-red-900 text-red-200 rounded">{error}</div>
+              )}
+              {!error && Array.isArray(festivals) && festivals.filter(f => f.title?.toLowerCase().includes(search.toLowerCase())).map(f => (
+                <div
+                  key={f.internalName}
+                  className={`cursor-pointer px-2 py-1 rounded border ${selectedInternalName === f.internalName ? 'bg-green-700 text-white border-green-400' : 'bg-gray-700 text-gray-200 border-transparent'} mb-1 hover:bg-green-600`}
+                  onMouseDown={() => {
+                    setSelectedInternalName(f.internalName);
+                    setFestival(f.title);
+                    setShowDropdown(false);
+                    if (setSelectedFestivalName) setSelectedFestivalName(f.title);
+                  }}
+                >
+                  <span className="font-bold">{f.title}</span>
+                  <span className="ml-2 text-xs text-gray-400">({f.internalName})</span>
+                  {selectedInternalName === f.internalName && (
+                    <span className="ml-2 text-green-300 font-bold">✓</span>
+                  )}
+                </div>
+              ))}
+              {search && !error && Array.isArray(festivals) && festivals.filter(f => f.title?.toLowerCase().includes(search.toLowerCase())).length === 0 && (
+                <div className="text-gray-400 px-2 py-1">No festivals found</div>
+              )}
+            </div>
+          )}
           <p className="text-gray-400 text-sm mt-1">
-            Check Clashfinder for available festivals
+            You can select a festival from the list or manually enter a festival name.
           </p>
         </div>
 

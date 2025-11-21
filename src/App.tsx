@@ -4,6 +4,7 @@ import Footer from './components/Footer'
 import Login from './components/Login'
 import FestivalForm from './components/FestivalForm'
 import Result from './components/Result'
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
@@ -11,6 +12,7 @@ function App() {
   const [festivalStats, setFestivalStats] = useState<{
     totalPossibleLikedTracks: number
     rank: number
+    festivalName?: string
   } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -76,31 +78,33 @@ function App() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-900">
-      <Header isLoggedIn={isLoggedIn} onLogout={handleLogout} />
-      <main className="flex-grow container mx-auto px-4 py-8">
-        <div className="max-w-md mx-auto">
-          {!isLoggedIn ? (
-            <Login setIsLoggedIn={setIsLoggedIn} />
-          ) : clashfinderLink ? (
-            <Result
-              link={clashfinderLink}
-              stats={festivalStats || undefined}
-              onReset={() => {
-                setClashfinderLink(null)
-                setFestivalStats(null)
-              }}
-            />
-          ) : (
-            <FestivalForm 
-              setClashfinderLink={setClashfinderLink}
-              setFestivalStats={setFestivalStats}
-            />
-          )}
-        </div>
-      </main>
-      <Footer />
-    </div>
+    <ErrorBoundary>
+      <div className="flex flex-col min-h-screen bg-gray-900">
+        <Header isLoggedIn={isLoggedIn} onLogout={handleLogout} />
+        <main className="flex-grow container mx-auto px-4 py-8">
+          <div className="max-w-md mx-auto">
+            {!isLoggedIn ? (
+              <Login setIsLoggedIn={setIsLoggedIn} />
+            ) : clashfinderLink ? (
+              <Result
+                link={clashfinderLink}
+                stats={festivalStats || undefined}
+                onReset={() => {
+                  setClashfinderLink(null)
+                  setFestivalStats(null)
+                }}
+              />
+            ) : (
+              <FestivalForm 
+                setClashfinderLink={setClashfinderLink}
+                setFestivalStats={setFestivalStats}
+              />
+            )}
+          </div>
+        </main>
+        <Footer />
+      </div>
+    </ErrorBoundary>
   )
 }
 
