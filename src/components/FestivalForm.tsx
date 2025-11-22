@@ -3,9 +3,13 @@ import { useState } from 'react'
 interface FestivalFormProps {
   setClashfinderLink: (link: string) => void
   setFestivalStats?: (stats: { totalPossibleLikedTracks: number; rank: number; festivalName?: string }) => void
+  mode?: 'liked' | 'playlist';
 }
 
 export default function FestivalForm({ setClashfinderLink, setFestivalStats }: FestivalFormProps) {
+    // Use mode from props, fallback to 'liked' for backward compatibility
+    const mode = typeof arguments[0]?.mode === 'string' ? arguments[0].mode : 'liked';
+    const [playlistUrl, setPlaylistUrl] = useState('');
   const [festival, setFestival] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,15 +58,25 @@ export default function FestivalForm({ setClashfinderLink, setFestivalStats }: F
       return;
     }
 
+    if (mode === 'playlist' && !playlistUrl.trim()) {
+      setError('Please enter a valid public Spotify playlist URL');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // If you want to support cache bypass, add logic here (e.g., a checkbox or always false)
-      const forceReloadData = false; // Change to true if you want to bypass cache
-      const url = `${import.meta.env.VITE_API_BASE_URL}/festivalmatching/${encodeURIComponent(festivalIdentifier)}${forceReloadData ? '?forceReloadData=true' : ''}`;
-      const res = await fetch(url, {
-        credentials: 'include',
-      });
+      let url = '';
+      let fetchOptions: RequestInit = {};
+      if (mode === 'liked') {
+        url = `${import.meta.env.VITE_API_BASE_URL}/festivalmatching/${encodeURIComponent(festivalIdentifier)}`;
+        fetchOptions = { credentials: 'include' };
+      } else {
+        const params = new URLSearchParams({ playlistUrl: playlistUrl.trim() });
+        url = `${import.meta.env.VITE_API_BASE_URL}/festivalmatching/${encodeURIComponent(festivalIdentifier)}/playlist?${params}`;
+        fetchOptions = {};
+      }
+      const res = await fetch(url, fetchOptions);
 
       if (!res.ok) {
         throw new Error('Failed to fetch festival data');
@@ -107,9 +121,24 @@ export default function FestivalForm({ setClashfinderLink, setFestivalStats }: F
 
   return (
     <div className="bg-gray-800 p-8 rounded-lg shadow-lg">
-      <h2 className="text-2xl font-bold mb-6 text-white">Select Your Festival</h2>
+      <h2 className="text-2xl font-bold mb-6 text-white">Get Your Festival Clashfinder Link</h2>
 
       <form onSubmit={handleSubmit}>
+        {mode === 'playlist' && (
+          <div className="mb-4">
+            <label htmlFor="playlist-url" className="block text-gray-300 mb-2">Spotify Playlist URL</label>
+            <input
+              id="playlist-url"
+              type="text"
+              value={playlistUrl}
+              onChange={e => setPlaylistUrl(e.target.value)}
+              placeholder="Paste a public Spotify playlist link..."
+              className="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded focus:outline-none focus:border-green-500 mb-2"
+              disabled={loading}
+            />
+            <p className="text-gray-400 text-sm mt-1">No login required. Playlist must be public.</p>
+          </div>
+        )}
         <div className="mb-4" style={{position: 'relative'}}>
           <label htmlFor="festival-search" className="block text-gray-300 mb-2">
             Search Festival Name

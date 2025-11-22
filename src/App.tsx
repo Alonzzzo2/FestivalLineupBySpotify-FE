@@ -15,6 +15,7 @@ function App() {
     festivalName?: string
   } | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [entryMode, setEntryMode] = useState<'choose' | 'login' | 'playlist'>('choose');
 
   const checkLoginStatus = async () => {
     try {
@@ -80,26 +81,65 @@ function App() {
   return (
     <ErrorBoundary>
       <div className="flex flex-col min-h-screen bg-gray-900">
-        <Header isLoggedIn={isLoggedIn} onLogout={handleLogout} />
+        <Header isLoggedIn={isLoggedIn} onLogout={handleLogout} onHeadlineClick={() => setEntryMode('choose')} />
         <main className="flex-grow container mx-auto px-4 py-8">
           <div className="max-w-md mx-auto">
-            {!isLoggedIn ? (
-              <Login setIsLoggedIn={setIsLoggedIn} />
-            ) : clashfinderLink ? (
-              <Result
-                link={clashfinderLink}
-                stats={festivalStats || undefined}
-                onReset={() => {
-                  setClashfinderLink(null)
-                  setFestivalStats(null)
-                }}
-              />
-            ) : (
-              <FestivalForm 
-                setClashfinderLink={setClashfinderLink}
-                setFestivalStats={setFestivalStats}
-              />
-            )}
+            {entryMode === 'choose' ? (
+              <div className="bg-gray-800 p-8 rounded-lg shadow-lg text-center">
+                <h2 className="text-2xl font-bold mb-6 text-white">Welcome!</h2>
+                <p className="text-gray-300 mb-6">Choose how you want to generate your festival link:</p>
+                <div className="flex flex-col gap-4">
+                  <button
+                    className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded transition duration-200"
+                    onClick={() => setEntryMode('login')}
+                  >
+                    🎵 Login with Spotify (Liked Songs)
+                  </button>
+                  <button
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded transition duration-200"
+                    onClick={() => setEntryMode('playlist')}
+                  >
+                    📋 Use a Public Spotify Playlist
+                  </button>
+                </div>
+              </div>
+            ) : entryMode === 'login' ? (
+              !isLoggedIn ? (
+                <Login setIsLoggedIn={setIsLoggedIn} />
+              ) : clashfinderLink ? (
+                <Result
+                  link={clashfinderLink}
+                  stats={festivalStats || undefined}
+                  onReset={() => {
+                    setClashfinderLink(null)
+                    setFestivalStats(null)
+                  }}
+                />
+              ) : (
+                <FestivalForm 
+                  setClashfinderLink={setClashfinderLink}
+                  setFestivalStats={setFestivalStats}
+                  mode={'liked'}
+                />
+              )
+            ) : entryMode === 'playlist' ? (
+              clashfinderLink ? (
+                <Result
+                  link={clashfinderLink}
+                  stats={festivalStats || undefined}
+                  onReset={() => {
+                    setClashfinderLink(null)
+                    setFestivalStats(null)
+                  }}
+                />
+              ) : (
+                <FestivalForm
+                  setClashfinderLink={setClashfinderLink}
+                  setFestivalStats={setFestivalStats}
+                  mode={'playlist'}
+                />
+              )
+            ) : null}
           </div>
         </main>
         <Footer />
