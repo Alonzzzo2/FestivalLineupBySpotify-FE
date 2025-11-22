@@ -4,14 +4,15 @@ interface HeaderProps {
   onHeadlineClick?: () => void
 }
 
-export default function Header({ isLoggedIn = false, onLogout }: HeaderProps) {
+export default function Header(props: HeaderProps) {
+  const { isLoggedIn = false, onLogout, onHeadlineClick } = props;
   return (
     <header className="bg-gray-800 border-b border-gray-700 py-6">
       <div className="container mx-auto px-4 flex justify-between items-start">
         <div>
           <h1
             className="text-3xl font-bold text-green-500 cursor-pointer hover:underline"
-            onClick={typeof arguments[0]?.onHeadlineClick === 'function' ? arguments[0].onHeadlineClick : undefined}
+            onClick={typeof onHeadlineClick === 'function' ? onHeadlineClick : undefined}
           >
             Your Personalized Festival Clashfinder
           </h1>
@@ -19,9 +20,9 @@ export default function Header({ isLoggedIn = false, onLogout }: HeaderProps) {
             Create a custom Clashfinder link using your Spotify likes or a playlist.
           </p>
         </div>
-        {isLoggedIn && arguments[0]?.onLogout && (
+        {isLoggedIn && onLogout && (
           <button
-            onClick={arguments[0].onLogout}
+            onClick={onLogout}
             className="bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded transition duration-200"
           >
             Logout

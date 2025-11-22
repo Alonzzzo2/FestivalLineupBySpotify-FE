@@ -48,6 +48,7 @@ function App() {
     } finally {
       setIsLoggedIn(false)
       setClashfinderLink(null)
+      setEntryMode('choose');
     }
   }
 
@@ -93,7 +94,7 @@ function App() {
                     className="w-full bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded transition duration-200"
                     onClick={() => setEntryMode('login')}
                   >
-                    🎵 Login with Spotify (Liked Songs)
+                    {isLoggedIn ? '🎵 Use Your Liked Songs' : '🎵 Login with Spotify (Liked Songs)'}
                   </button>
                   <button
                     className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded transition duration-200"
