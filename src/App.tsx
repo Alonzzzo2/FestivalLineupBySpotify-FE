@@ -5,26 +5,31 @@ import Login from './components/Login'
 import FestivalForm from './components/FestivalForm'
 import Result from './components/Result'
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { FestivalMatchResponse } from './types';
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [clashfinderLink, setClashfinderLink] = useState<string | null>(null)
-  const [festivalStats, setFestivalStats] = useState<{
-    totalPossibleLikedTracks: number
-    rank: number
-    festivalName?: string
-  } | null>(null)
+  const [festivalStats, setFestivalStats] = useState<FestivalMatchResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [entryMode, setEntryMode] = useState<'choose' | 'login' | 'playlist'>('choose');
+
+  const [festivals, setFestivals] = useState<Array<{
+    title: string;
+    internalName: string;
+    startDate: string;
+    printAdvisory: number;
+  }>>([])
+  const [festivalsError, setFestivalsError] = useState<string | null>(null)
 
   const checkLoginStatus = async () => {
     try {
       const apiUrl = `${import.meta.env.VITE_API_BASE_URL}/authentication/profile`
-      
+
       const res = await fetch(apiUrl, {
         credentials: 'include',
       })
-      
+
       if (res.ok) {
         setIsLoggedIn(true)
       } else {
@@ -36,6 +41,27 @@ function App() {
       setIsLoading(false)
     }
   }
+
+  const fetchFestivals = async () => {
+    try {
+      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/clashfinders/list/all`, {
+        credentials: 'include',
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setFestivals(data);
+        } else {
+          setFestivals([]);
+          setFestivalsError('Festival list response is invalid.');
+        }
+      } else {
+        setFestivalsError('Failed to load festival list. Please try again later.');
+      }
+    } catch (err) {
+      setFestivalsError('Network error loading festival list.');
+    }
+  };
 
   const handleLogout = async () => {
     try {
@@ -55,6 +81,7 @@ function App() {
   // Check if user is already logged in (token in cookie)
   useEffect(() => {
     checkLoginStatus()
+    fetchFestivals()
   }, [])
 
   // Recheck login status when window comes back into focus
@@ -109,25 +136,25 @@ function App() {
                 <Login setIsLoggedIn={setIsLoggedIn} />
               ) : clashfinderLink ? (
                 <Result
-                  link={clashfinderLink}
-                  stats={festivalStats || undefined}
+                  festival={festivalStats}
                   onReset={() => {
                     setClashfinderLink(null)
                     setFestivalStats(null)
                   }}
                 />
               ) : (
-                <FestivalForm 
+                <FestivalForm
                   setClashfinderLink={setClashfinderLink}
                   setFestivalStats={setFestivalStats}
                   mode={'liked'}
+                  festivals={festivals}
+                  festivalsError={festivalsError}
                 />
               )
             ) : entryMode === 'playlist' ? (
               clashfinderLink ? (
                 <Result
-                  link={clashfinderLink}
-                  stats={festivalStats || undefined}
+                  festival={festivalStats}
                   onReset={() => {
                     setClashfinderLink(null)
                     setFestivalStats(null)
@@ -138,6 +165,8 @@ function App() {
                   setClashfinderLink={setClashfinderLink}
                   setFestivalStats={setFestivalStats}
                   mode={'playlist'}
+                  festivals={festivals}
+                  festivalsError={festivalsError}
                 />
               )
             ) : null}

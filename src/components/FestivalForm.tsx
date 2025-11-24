@@ -1,52 +1,32 @@
 import { useState } from 'react'
+import { FestivalMatchResponse } from '../types';
 
 interface FestivalFormProps {
   setClashfinderLink: (link: string) => void
-  setFestivalStats?: (stats: { totalPossibleLikedTracks: number; rank: number; festivalName?: string }) => void
+  setFestivalStats?: (stats: FestivalMatchResponse) => void
   mode?: 'liked' | 'playlist';
-}
-
-export default function FestivalForm({ setClashfinderLink, setFestivalStats }: FestivalFormProps) {
-    // Use mode from props, fallback to 'liked' for backward compatibility
-    const mode = typeof arguments[0]?.mode === 'string' ? arguments[0].mode : 'liked';
-    const [playlistUrl, setPlaylistUrl] = useState('');
-  const [festival, setFestival] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [festivals, setFestivals] = useState<Array<{
+  festivals?: Array<{
     title: string;
     internalName: string;
     startDate: string;
     printAdvisory: number;
-  }>>([]);
+  }>;
+  festivalsError?: string | null;
+}
+
+export default function FestivalForm({ setClashfinderLink, setFestivalStats, festivals = [], festivalsError = null }: FestivalFormProps) {
+  // Use mode from props, fallback to 'liked' for backward compatibility
+  const mode = typeof arguments[0]?.mode === 'string' ? arguments[0].mode : 'liked';
+  const [playlistUrl, setPlaylistUrl] = useState('');
+  const [festival, setFestival] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [selectedInternalName, setSelectedInternalName] = useState('');
-  const [festivalsLoaded, setFestivalsLoaded] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  // Fetch festivals only when user interacts with the search box
-  const fetchFestivals = async () => {
-    if (festivalsLoaded) return;
-    try {
-      const res = await fetch(`${import.meta.env.VITE_API_BASE_URL}/clashfinders/list/all`, {
-        credentials: 'include',
-      });
-      if (res.ok) {
-        const data = await res.json();
-        if (Array.isArray(data)) {
-          setFestivals(data);
-        } else {
-          setFestivals([]);
-          setError('Festival list response is invalid.');
-        }
-        setFestivalsLoaded(true);
-      } else {
-        setError('Failed to load festival list. Please try again later.');
-      }
-    } catch (err) {
-      setError('Network error loading festival list.');
-    }
-  };
+  // Use error from props if available
+  const displayError = error || festivalsError;
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -88,15 +68,21 @@ export default function FestivalForm({ setClashfinderLink, setFestivalStats }: F
       // Handle both JSON and plain text responses
       if (contentType && contentType.includes('application/json')) {
         const data = await res.json();
-        clashfinderUrl = data.url || data.clashfinderUrl;
 
-        // Extract stats if available
-        if (setFestivalStats && data.totalPossibleLikedTracks !== undefined) {
-          setFestivalStats({
-            totalPossibleLikedTracks: data.totalPossibleLikedTracks,
-            rank: data.rank || 0,
-            festivalName: data.festival?.name || '',
-          });
+        // Check if it's the new response format (has matchedTracksCount and rankingMessage)
+        if (data.matchedTracksCount !== undefined && data.rankingMessage !== undefined) {
+          const response = data as FestivalMatchResponse;
+          clashfinderUrl = response.url;
+          if (setFestivalStats) {
+            setFestivalStats(response);
+          }
+        } else {
+          // Legacy fallback
+          clashfinderUrl = data.url || data.clashfinderUrl;
+          if (setFestivalStats && data.totalPossibleLikedTracks !== undefined) {
+            // Map legacy to new format if possible, or just ignore stats for now as we want the new UI
+            console.warn('Received legacy response format');
+          }
         }
       } else {
         // If response is plain text, treat it as the URL directly
@@ -139,7 +125,7 @@ export default function FestivalForm({ setClashfinderLink, setFestivalStats }: F
             <p className="text-gray-400 text-sm mt-1">No login required. Playlist must be public.</p>
           </div>
         )}
-        <div className="mb-4" style={{position: 'relative'}}>
+        <div className="mb-4" style={{ position: 'relative' }}>
           <label htmlFor="festival-search" className="block text-gray-300 mb-2">
             Search Festival Name
           </label>
@@ -148,25 +134,24 @@ export default function FestivalForm({ setClashfinderLink, setFestivalStats }: F
             type="text"
             autoComplete="off"
             value={selectedInternalName ? festival : search}
-            onFocus={() => { fetchFestivals(); setShowDropdown(true); }}
+            onFocus={() => { setShowDropdown(true); }}
             onBlur={() => setTimeout(() => setShowDropdown(false), 150)}
             onChange={(e) => {
               setSearch(e.target.value);
               setSelectedInternalName('');
               setFestival('');
               setShowDropdown(true);
-              if (!festivalsLoaded) fetchFestivals();
             }}
             placeholder="Type to search..."
             className="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded focus:outline-none focus:border-green-500 mb-2"
             disabled={loading}
           />
           {showDropdown && (
-            <div className="max-h-40 overflow-y-auto mb-2 absolute z-10 bg-gray-800 border border-gray-600 rounded shadow-lg" style={{width: 'inherit', minWidth: '200px'}}>
-              {error && (
-                <div className="mb-2 p-2 bg-red-900 text-red-200 rounded">{error}</div>
+            <div className="max-h-40 overflow-y-auto mb-2 absolute z-10 bg-gray-800 border border-gray-600 rounded shadow-lg" style={{ width: 'inherit', minWidth: '200px' }}>
+              {displayError && (
+                <div className="mb-2 p-2 bg-red-900 text-red-200 rounded">{displayError}</div>
               )}
-              {!error && Array.isArray(festivals) && festivals.filter(f => f.title?.toLowerCase().includes(search.toLowerCase())).map(f => (
+              {!displayError && Array.isArray(festivals) && festivals.filter(f => f.title?.toLowerCase().includes(search.toLowerCase())).map(f => (
                 <div
                   key={f.internalName}
                   className={`cursor-pointer px-2 py-1 rounded border ${selectedInternalName === f.internalName ? 'bg-green-700 text-white border-green-400' : 'bg-gray-700 text-gray-200 border-transparent'} mb-1 hover:bg-green-600`}
@@ -183,7 +168,7 @@ export default function FestivalForm({ setClashfinderLink, setFestivalStats }: F
                   )}
                 </div>
               ))}
-              {search && !error && Array.isArray(festivals) && festivals.filter(f => f.title?.toLowerCase().includes(search.toLowerCase())).length === 0 && (
+              {search && !displayError && Array.isArray(festivals) && festivals.filter(f => f.title?.toLowerCase().includes(search.toLowerCase())).length === 0 && (
                 <div className="text-gray-400 px-2 py-1">No festivals found</div>
               )}
             </div>
@@ -193,9 +178,9 @@ export default function FestivalForm({ setClashfinderLink, setFestivalStats }: F
           </p>
         </div>
 
-        {error && (
+        {displayError && (
           <div className="mb-4 p-3 bg-red-900 text-red-200 rounded">
-            {error}
+            {displayError}
           </div>
         )}
 

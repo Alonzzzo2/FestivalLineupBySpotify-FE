@@ -1,0 +1,81 @@
+import React from 'react';
+import { FestivalMatchResponse } from '../types';
+
+interface ScoreCardProps {
+    festival: FestivalMatchResponse;
+    onVisitClashFinder?: () => void;
+}
+
+const ScoreCard: React.FC<ScoreCardProps> = ({
+    festival,
+    onVisitClashFinder
+}) => {
+    const formatDate = (isoDateString: string): string => {
+        // Handle invalid or missing dates
+        if (!isoDateString) {
+            return 'Date TBA';
+        }
+        try {
+            const date = new Date(isoDateString);
+            // Check if date is valid
+            if (isNaN(date.getTime())) {
+                return 'Date TBA';
+            }
+            // Use browser's locale for formatting
+            return date.toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+        } catch {
+            return 'Date TBA';
+        }
+    };
+
+    return (
+        <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow text-gray-900">
+            {/* Festival Header */}
+            <div className="mb-4">
+                <h2 className="text-2xl font-bold text-gray-900">{festival.festival.name}</h2>
+                <p className="text-sm text-gray-600">
+                    📅 {formatDate(festival.festival.startDate)}
+                </p>
+            </div>
+
+            {/* Match Statistics */}
+            <div className="bg-gradient-to-br from-gray-700 to-gray-800 text-white rounded-lg p-6 mb-4 border border-gray-600">
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="text-center">
+                        <p className="text-sm font-semibold text-gray-300 mb-1">Matched Tracks</p>
+                        <p className="text-4xl font-bold text-green-400">{festival.matchedTracksCount}</p>
+                    </div>
+                    <div className="text-center">
+                        <p className="text-sm font-semibold text-gray-300 mb-1">Matched Artists</p>
+                        <p className="text-4xl font-bold text-green-400">{festival.matchedArtistsCount}</p>
+                    </div>
+                </div>
+                <div className="text-center border-t border-gray-600 pt-3">
+                    <p className="text-sm font-semibold text-gray-300 mb-1">Tracks Per Show</p>
+                    <p className="text-2xl font-bold text-green-400">{festival.tracksPerShow.toFixed(2)}</p>
+                </div>
+            </div>
+
+            {/* Ranking Message */}
+            <div className="bg-gray-700 border-l-4 border-green-500 p-4 mb-4">
+                <p className="text-sm text-gray-200 font-medium">✨ {festival.rankingMessage}</p>
+            </div>
+
+            {/* Actions */}
+            <div className="flex gap-2">
+                <button
+                    onClick={onVisitClashFinder}
+                    className="flex-1 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition-colors text-center font-semibold"
+                >
+                    🎪 View ClashFinder Schedule
+                </button>
+            </div>
+        </div>
+    );
+};
+
+export default ScoreCard;
