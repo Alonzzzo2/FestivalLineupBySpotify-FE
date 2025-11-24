@@ -76,6 +76,59 @@ app.get('/festivalmatching/:festival/playlist', (req, res) => {
   })
 })
 
+// Year-based festival matching endpoints
+app.get('/festivalmatching/by-year/:year', (req, res) => {
+  const { year } = req.params
+  const yearNum = parseInt(year)
+
+  // Generate mock array of festival matches for the year
+  const mockMatches = Array.from({ length: 15 }, (_, i) => {
+    const festivalNum = i + 1
+    const baseScore = 200 - (i * 10)
+    return {
+      url: `https://clashfinder.com/s/festival${yearNum}-${festivalNum}/?hl1=artist${festivalNum}`,
+      matchedArtistsCount: Math.floor(50 - (i * 2)),
+      matchedTracksCount: baseScore,
+      tracksPerShow: parseFloat((0.5 - (i * 0.02)).toFixed(2)),
+      rankingMessage: `${baseScore} potential tracks across ${50 - (i * 2)} artists from your playlist, ${(0.5 - (i * 0.02)).toFixed(2)} per show.`,
+      festival: {
+        name: `Festival ${festivalNum} ${year}`,
+        id: `festival${yearNum}-${festivalNum}`,
+        url: `https://clashfinder.com/s/festival${yearNum}-${festivalNum}/`,
+        startDate: new Date(`${year}-${String(i % 12 + 1).padStart(2, '0')}-15T00:00:00`).toISOString()
+      }
+    }
+  })
+
+  res.json(mockMatches)
+})
+
+app.get('/festivalmatching/by-year/:year/playlist', (req, res) => {
+  const { year } = req.params
+  const yearNum = parseInt(year)
+
+  // Generate mock array of festival matches for the year (playlist mode)
+  const mockMatches = Array.from({ length: 12 }, (_, i) => {
+    const festivalNum = i + 1
+    const baseScore = 180 - (i * 12)
+    return {
+      url: `https://clashfinder.com/s/festival${yearNum}-p${festivalNum}/?hl1=artist${festivalNum}`,
+      matchedArtistsCount: Math.floor(40 - (i * 2)),
+      matchedTracksCount: baseScore,
+      tracksPerShow: parseFloat((0.45 - (i * 0.025)).toFixed(2)),
+      rankingMessage: `${baseScore} potential tracks across ${40 - (i * 2)} artists from your playlist, ${(0.45 - (i * 0.025)).toFixed(2)} per show.`,
+      festival: {
+        name: `Festival ${festivalNum} ${year}`,
+        id: `festival${yearNum}-p${festivalNum}`,
+        url: `https://clashfinder.com/s/festival${yearNum}-p${festivalNum}/`,
+        startDate: new Date(`${year}-${String(i % 12 + 1).padStart(2, '0')}-20T00:00:00`).toISOString()
+      }
+    }
+  })
+
+  res.json(mockMatches)
+})
+
 app.listen(PORT, () => {
   console.log(`🎵 Mock backend running on http://localhost:${PORT}`)
 })

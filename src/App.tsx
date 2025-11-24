@@ -4,6 +4,8 @@ import Footer from './components/Footer'
 import Login from './components/Login'
 import FestivalForm from './components/FestivalForm'
 import Result from './components/Result'
+import YearSearchForm from './components/YearSearchForm'
+import TopMatchesResult from './components/TopMatchesResult'
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { FestivalMatchResponse } from './types';
 
@@ -11,8 +13,10 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [clashfinderLink, setClashfinderLink] = useState<string | null>(null)
   const [festivalStats, setFestivalStats] = useState<FestivalMatchResponse | null>(null)
+  const [topMatches, setTopMatches] = useState<FestivalMatchResponse[] | null>(null)
+  const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
   const [isLoading, setIsLoading] = useState(true)
-  const [entryMode, setEntryMode] = useState<'choose' | 'login' | 'playlist'>('choose');
+  const [entryMode, setEntryMode] = useState<'choose' | 'login' | 'playlist' | 'year-liked' | 'year-playlist'>('choose');
 
   const [festivals, setFestivals] = useState<Array<{
     title: string;
@@ -74,6 +78,7 @@ function App() {
     } finally {
       setIsLoggedIn(false)
       setClashfinderLink(null)
+      setTopMatches(null)
       setEntryMode('choose');
     }
   }
@@ -109,9 +114,9 @@ function App() {
   return (
     <ErrorBoundary>
       <div className="flex flex-col min-h-screen bg-gray-900">
-        <Header isLoggedIn={isLoggedIn} onLogout={handleLogout} onHeadlineClick={() => setEntryMode('choose')} />
+        <Header isLoggedIn={isLoggedIn} onLogout={handleLogout} onHeadlineClick={() => { setEntryMode('choose'); setTopMatches(null); setClashfinderLink(null); }} />
         <main className="flex-grow container mx-auto px-4 py-8">
-          <div className="max-w-md mx-auto">
+          <div className={topMatches ? "max-w-5xl mx-auto" : "max-w-md mx-auto"}>
             {entryMode === 'choose' ? (
               <div className="bg-gray-800 p-8 rounded-lg shadow-lg text-center">
                 <h2 className="text-2xl font-bold mb-6 text-white">Welcome!</h2>
@@ -128,6 +133,20 @@ function App() {
                     onClick={() => setEntryMode('playlist')}
                   >
                     📋 Use a Public Spotify Playlist
+                  </button>
+                  <div className="border-t border-gray-700 my-4"></div>
+                  <p className="text-gray-400 text-sm mb-3">Or search for best festivals by year:</p>
+                  <button
+                    className="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded transition duration-200"
+                    onClick={() => setEntryMode('year-liked')}
+                  >
+                    {isLoggedIn ? '📅 Best Festivals by Year (Liked Songs)' : '📅 Login for Year Search (Liked Songs)'}
+                  </button>
+                  <button
+                    className="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 px-4 rounded transition duration-200 mt-3"
+                    onClick={() => setEntryMode('year-playlist')}
+                  >
+                    📅 Best Festivals by Year (Playlist)
                   </button>
                 </div>
               </div>
@@ -167,6 +186,44 @@ function App() {
                   mode={'playlist'}
                   festivals={festivals}
                   festivalsError={festivalsError}
+                />
+              )
+            ) : entryMode === 'year-liked' ? (
+              !isLoggedIn ? (
+                <Login setIsLoggedIn={setIsLoggedIn} />
+              ) : topMatches ? (
+                <TopMatchesResult
+                  matches={topMatches}
+                  year={selectedYear}
+                  onReset={() => setTopMatches(null)}
+                />
+              ) : (
+                <YearSearchForm
+                  setTopMatches={(matches) => {
+                    setTopMatches(matches);
+                    if (matches.length > 0) {
+                      setSelectedYear(new Date().getFullYear());
+                    }
+                  }}
+                  mode="liked"
+                />
+              )
+            ) : entryMode === 'year-playlist' ? (
+              topMatches ? (
+                <TopMatchesResult
+                  matches={topMatches}
+                  year={selectedYear}
+                  onReset={() => setTopMatches(null)}
+                />
+              ) : (
+                <YearSearchForm
+                  setTopMatches={(matches) => {
+                    setTopMatches(matches);
+                    if (matches.length > 0) {
+                      setSelectedYear(new Date().getFullYear());
+                    }
+                  }}
+                  mode="playlist"
                 />
               )
             ) : null}
