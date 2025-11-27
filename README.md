@@ -1,1 +1,1 @@
-# FestivalLineupBySpotify-FE
+# FestivalMatcher-FE
