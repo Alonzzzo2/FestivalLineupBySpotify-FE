@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { FestivalMatchResponse } from '../types';
 import ScoreCard from './ScoreCard';
 
@@ -6,12 +6,50 @@ interface TopMatchesResultProps {
     matches: FestivalMatchResponse[];
     onReset: () => void;
     year: number;
+    mode: 'liked' | 'playlist';
 }
 
 type SortOption = 'rank' | 'tracks' | 'artists';
 
-export default function TopMatchesResult({ matches, onReset, year }: TopMatchesResultProps) {
-    const [sortBy, setSortBy] = useState<SortOption>('rank');
+// Helper function to get localStorage key based on mode
+const getSortPreferenceKey = (mode: 'liked' | 'playlist') => {
+    return `festivalMatcher_sortPreference_${mode}`;
+};
+
+// Helper function to load sort preference from localStorage
+const loadSortPreference = (mode: 'liked' | 'playlist'): SortOption => {
+    try {
+        const key = getSortPreferenceKey(mode);
+        const saved = localStorage.getItem(key);
+        if (saved && ['rank', 'tracks', 'artists'].includes(saved)) {
+            return saved as SortOption;
+        }
+    } catch (error) {
+        // If localStorage is not available or fails, return default
+        console.warn('Failed to load sort preference from localStorage:', error);
+    }
+    return 'rank';
+};
+
+// Helper function to save sort preference to localStorage
+const saveSortPreference = (mode: 'liked' | 'playlist', sortBy: SortOption) => {
+    try {
+        const key = getSortPreferenceKey(mode);
+        localStorage.setItem(key, sortBy);
+    } catch (error) {
+        // If localStorage is not available or fails, silently fail
+        console.warn('Failed to save sort preference to localStorage:', error);
+    }
+};
+
+export default function TopMatchesResult({ matches, onReset, year, mode }: TopMatchesResultProps) {
+    // Initialize sortBy from localStorage based on mode
+    const [sortBy, setSortBy] = useState<SortOption>(() => loadSortPreference(mode));
+
+    // Save sort preference to localStorage whenever it changes
+    useEffect(() => {
+        saveSortPreference(mode, sortBy);
+    }, [mode, sortBy]);
 
     // Create a copy of matches with original rank preserved
     const matchesWithRank = useMemo(() => 

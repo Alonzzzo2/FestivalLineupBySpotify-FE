@@ -196,6 +196,7 @@ function App() {
                   matches={topMatches}
                   year={selectedYear}
                   onReset={() => setTopMatches(null)}
+                  mode="liked"
                 />
               ) : (
                 <YearSearchForm
@@ -214,6 +215,7 @@ function App() {
                   matches={topMatches}
                   year={selectedYear}
                   onReset={() => setTopMatches(null)}
+                  mode="playlist"
                 />
               ) : (
                 <YearSearchForm
