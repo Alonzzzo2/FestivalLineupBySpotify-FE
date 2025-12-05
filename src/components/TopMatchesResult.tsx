@@ -1,3 +1,4 @@
+import { useState, useMemo, useEffect } from 'react';
 import { useState, useEffect } from 'react';
 import { FestivalMatchResponse } from '../types';
 import ScoreCard from './ScoreCard';
@@ -8,7 +9,46 @@ interface TopMatchesResultProps {
     onReset: () => void;
     year: number;
     mode: 'liked' | 'playlist';
-    playlistUrl?: string;
+}
+
+type SortOption = 'rank' | 'tracks' | 'artists';
+
+// Constants
+const SORT_PREFERENCE_KEY_PREFIX = 'festivalMatcher_sortPreference_';
+const VALID_SORT_OPTIONS: SortOption[] = ['rank', 'tracks', 'artists'];
+
+// Helper function to get localStorage key based on mode
+const getSortPreferenceKey = (mode: 'liked' | 'playlist') => {
+    return `${SORT_PREFERENCE_KEY_PREFIX}${mode}`;
+};
+
+// Helper function to load sort preference from localStorage
+const loadSortPreference = (mode: 'liked' | 'playlist'): SortOption => {
+    try {
+        const key = getSortPreferenceKey(mode);
+        const saved = localStorage.getItem(key);
+        if (saved && VALID_SORT_OPTIONS.includes(saved as SortOption)) {
+            return saved as SortOption;
+        }
+    } catch (error) {
+        // If localStorage is not available or fails, return default
+        console.warn('Failed to load sort preference from localStorage:', error);
+    }
+    return 'rank';
+};
+
+// Helper function to save sort preference to localStorage
+const saveSortPreference = (mode: 'liked' | 'playlist', sortBy: SortOption) => {
+    try {
+        const key = getSortPreferenceKey(mode);
+        localStorage.setItem(key, sortBy);
+    } catch (error) {
+        // If localStorage is not available or fails, silently fail
+        console.warn('Failed to save sort preference to localStorage:', error);
+    }
+};
+mode: 'liked' | 'playlist';
+playlistUrl ?: string;
 }
 
 export default function TopMatchesResult({ onReset, year, mode, playlistUrl }: TopMatchesResultProps) {
@@ -108,7 +148,7 @@ export default function TopMatchesResult({ onReset, year, mode, playlistUrl }: T
     };
 
     // Display only top 10
-    const topTen = matches.slice(0, 10);
+    const topTen = sortedMatches.slice(0, 10);
 
     return (
         <div className="max-w-4xl mx-auto">
@@ -119,6 +159,23 @@ export default function TopMatchesResult({ onReset, year, mode, playlistUrl }: T
                 <p className="text-gray-400">
                     Showing top {topTen.length} matches based on your music taste
                 </p>
+            </div>
+
+            {/* Sorting Controls */}
+            <div className="mb-6 bg-gray-800 p-4 rounded-lg">
+                <label htmlFor="sort-select" className="block text-gray-300 mb-2 font-semibold">
+                    Sort by:
+                </label>
+                <select
+                    id="sort-select"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as SortOption)}
+                    className="w-full px-4 py-2 bg-gray-700 text-white border border-gray-600 rounded focus:outline-none focus:border-green-500"
+                >
+                    <option value="rank">🏆 Rank (Default)</option>
+                    <option value="tracks">🎵 Number of Liked Songs</option>
+                    <option value="artists">👥 Number of Liked Artists</option>
+                </select>
             </div>
 
             {/* Sort Options */}
@@ -154,7 +211,7 @@ export default function TopMatchesResult({ onReset, year, mode, playlistUrl }: T
             <div className="space-y-6 mb-6">
                 {topTen.map((festival, index) => (
                     <div key={festival.festival.id} className="relative">
-                        {/* Rank Badge */}
+                        {/* Rank Badge - Shows current sort position */}
                         <div className="absolute -left-4 top-4 z-10">
                             <div className="bg-green-500 text-white rounded-full w-12 h-12 flex items-center justify-center font-bold text-lg shadow-lg">
                                 #{index + 1}
