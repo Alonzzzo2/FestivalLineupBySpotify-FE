@@ -15,7 +15,6 @@ function App() {
   const [festivalStats, setFestivalStats] = useState<FestivalMatchResponse | null>(null)
   const [topMatches, setTopMatches] = useState<FestivalMatchResponse[] | null>(null)
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear())
-  const [playlistUrl, setPlaylistUrl] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
   const [entryMode, setEntryMode] = useState<'choose' | 'login' | 'playlist' | 'year-liked' | 'year-playlist'>('choose');
 
@@ -227,7 +226,6 @@ function App() {
                     }
                   }}
                   mode="playlist"
-                  onPlaylistUrlChange={(url) => setPlaylistUrl(url)}
                 />
               )
             ) : null}
